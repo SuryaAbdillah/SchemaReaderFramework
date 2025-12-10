@@ -23,7 +23,7 @@ def main_converter(input_data, chunk_size, num_workers, formats, output_dir):
         out_dir = f"{output_dir}/{fmt}"
         convert_jsonl(scan_info, output_dir=out_dir, fmt=fmt, num_workers=num_workers)
 
-def main_benchmark(input_data, chunk_size, num_workers, formats, output_dir):
+def main_benchmark(input_data, chunk_size, num_workers, formats, output_dir, benchmark_csv_dir=None):
     #jsonl_path = input_data
     scan_info = scan_jsonl_file(input_data, chunk_size=chunk_size)
 
@@ -75,21 +75,40 @@ def main_benchmark(input_data, chunk_size, num_workers, formats, output_dir):
     print_table("READ BENCHMARK RESULTS", results_read)
     print_table("QUERY BENCHMARK RESULTS", results_query) 
 
+    # Define foleder to save benchmark results
+    if benchmark_csv_dir is None:
+        csv_dir = Path.cwd() / "benchmark_results"
+    else:
+        csv_dir = Path(benchmark_csv_dir)
+
+    csv_dir.mkdir(parents=True, exist_ok=True)
+
     input_stem = Path(input_data).stem
-    pd.DataFrame(results_write).to_csv(f"benchmark_write_{input_stem}.csv", index=False)
-    pd.DataFrame(results_read).to_csv(f"benchmark_read_{input_stem}.csv", index=False)
-    pd.DataFrame(results_query).to_csv(f"benchmark_query_{input_stem}.csv", index=False)
+    pd.DataFrame(results_write).to_csv(csv_dir / f"benchmark_write_{input_stem}.csv", index=False)
+    pd.DataFrame(results_read).to_csv(csv_dir / f"benchmark_read_{input_stem}.csv", index=False)
+    pd.DataFrame(results_query).to_csv(csv_dir / f"benchmark_query_{input_stem}.csv", index=False)
 
     print("Benchmark completed. Results saved to CSV.")
 
-def main_ml_benchmark(input_data, formats, output_dir):
+def main_ml_benchmark(input_data, formats, output_dir, ml_benchmark_csv_dir=None):
     #formats = ["jsonl", "csv", "parquet", "feather", "avro"]
+
+    output_dir = Path(output_dir)
+
+    if ml_benchmark_csv_dir is None:
+        ml_csv_dir = Path.cwd() / "ml_benchmark_results"
+    else:
+        ml_csv_dir = Path(ml_benchmark_csv_dir)
+
+    ml_csv_dir.mkdir(parents=True, exist_ok=True)
+
     input_stem = Path(input_data).stem
 
     results = []
 
     for fmt in formats:
-        filepath = f"output/{fmt}/{input_stem}.{fmt}"
+        filepath = output_dir / fmt / f"{input_stem}.{fmt}"
+        filepath = str(filepath)
 
         print(f"\n=== ML BENCHMARK: {fmt.upper()} ===")
 
@@ -151,6 +170,20 @@ def main_ml_benchmark(input_data, formats, output_dir):
     print_ml_table("SVM ML BENCHMARK", results, svm_columns)
     print_ml_table("MLP NEURAL NETWORK ML BENCHMARK", results, mlp_columns) 
 
+    # Save results to CSV
+    df_all = pd.DataFrame(results)
+
+    df_lr = df_all[lr_columns]
+    df_svm = df_all[svm_columns]
+    df_mlp = df_all[mlp_columns]
+
+    df_lr.to_csv(ml_csv_dir / f"ml_benchmark_lr_{input_stem}.csv", index=False)
+    df_svm.to_csv(ml_csv_dir / f"ml_benchmark_svm_{input_stem}.csv", index=False)
+    df_mlp.to_csv(ml_csv_dir / f"ml_benchmark_mlp_{input_stem}.csv", index=False)
+
+    print(f"\nML benchmark CSV saved in: {ml_csv_dir}")
+
+
 def parse_args():
     parser = argparse.ArgumentParser(description="JSONL Schema Reader & Converter")
 
@@ -161,7 +194,11 @@ def parse_args():
     parser.add_argument("--num-workers", type=int, default=20, help="Number of workers for conversion")
     parser.add_argument("--formats", nargs="+", default=["csv"], help="Output formats: csv parquet avro feather" )
     parser.add_argument("--output-dir", type=str, default="output", help="Base output directory")
+    parser.add_argument("--benchmark-csv-dir", type=str, default=None, help="Directory to save IO benchmark CSV results (default: ./benchmark_results)")
+    parser.add_argument("--ml-benchmark-csv-dir", type=str, default=None, help="Directory to save ML benchmark CSV results (default: ./ml_benchmark_results)")
     return parser.parse_args()
+
+
 if __name__ == "__main__":
     args = parse_args()
     if args.mode == "schema":
@@ -182,10 +219,12 @@ if __name__ == "__main__":
             num_workers=args.num_workers,
             formats=args.formats,
             output_dir=args.output_dir,
+            benchmark_csv_dir=args.benchmark_csv_dir,
         )
     elif args.mode == "ml_benchmark":
         main_ml_benchmark(
             input_data=args.input_data,
             formats=args.formats,
             output_dir=args.output_dir,
+            ml_benchmark_csv_dir=args.ml_benchmark_csv_dir,
         )
