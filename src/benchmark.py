@@ -80,8 +80,8 @@ def benchmark_write(format_name, convert_func, scan_info, output_dir, fmt, num_w
     return {
         "format": format_name,
         "output_file": final_file,
-        "file_size_mb": file_size,
-        "write_time_ms": float(f"{elapsed * 1000:.4f}"),
+        "file_size_mb":file_size,
+        "write_time_ms":elapsed * 1000,
         "cpu_avg_proc_percent": cpu_avg,
         "mem_before_mb": mem_before,
         "mem_after_mb": mem_after,
@@ -122,11 +122,11 @@ def benchmark_read(filepath, fmt):
 
     return {
         "format": fmt,
-        "read_time_ms": float(f"{elapsed * 1000:.4f}"),
+        "read_time_ms": elapsed * 1000,
         "rows_loaded": len(df),
         "cpu_avg_proc_percent": cpu_avg,
         "mem_before_mb": mem_before,
-        "mem_after_mb": mem_after,
+        "mem_after_mb": mem_after
     }
 
 # ------------------------------------------------------------
@@ -194,7 +194,7 @@ def benchmark_query(df, fmt):
         "cpu_avg_proc_percent": cpu_avg,
         "mem_before_mb": mem_before,
         "mem_after_mb": mem_after,
-        "total_query_ms": float(f"{elapsed * 1000:.4f}")
+        "total_query_ms": elapsed * 1000
     })
 
     return results
